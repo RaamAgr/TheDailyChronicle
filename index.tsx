@@ -37,16 +37,34 @@ const setCachedArticles = (articles: any[]) => {
   }
 };
 
+// Image preloading utility - silent background loading
+const preloadImages = (articles: any[]) => {
+  articles.forEach((article, index) => {
+    if (article.img && article.img !== DEFAULT_IMG) {
+      // Create image element but don't wait for it to load
+      const img = new Image();
+      img.onload = () => console.log(`Preloaded image ${index + 1}`);
+      img.onerror = () => console.log(`Failed to preload image ${index + 1}`);
+      
+      // Stagger loading to avoid overwhelming the network
+      setTimeout(() => {
+        img.src = article.img;
+      }, index * 50); // 50ms delay between each image
+    }
+  });
+};
+
 // Fetch news articles from API
 const fetchNews = async (limit = 50) => {
-  // Check cache first
+  // Check cache first, but only if we're asking for same or fewer articles
   const cached = getCachedArticles();
   if (cached && cached.length >= limit) {
-    console.log('Using cached articles');
+    console.log(`Using cached articles (${cached.length} available, ${limit} requested)`);
     return cached.slice(0, limit);
   }
 
   try {
+    console.log(`Fetching ${limit} articles from API`);
     const response = await fetch(`${API_BASE}/articles?limit=${limit}`, {
       method: 'GET',
       headers: {
@@ -78,14 +96,21 @@ const fetchNews = async (limit = 50) => {
       content: article.content
     }));
 
-    // Cache the results
-    setCachedArticles(articles);
+    // Cache the results only if we got more articles than before
+    if (!cached || articles.length > cached.length) {
+      setCachedArticles(articles);
+      console.log(`Cached ${articles.length} articles`);
+    }
     
     return articles;
   } catch (error) {
     console.error('Failed to fetch news:', error);
     // Return cached data as fallback if available
-    return cached || [];
+    if (cached) {
+      console.log('Using cached articles as fallback');
+      return cached.slice(0, limit);
+    }
+    return [];
   }
 };
 
@@ -439,6 +464,10 @@ const NewspaperPage = React.forwardRef<HTMLDivElement, { article: any, pageNum: 
               src={article.img || DEFAULT_IMG}
               alt="Story Visual"
               draggable="false"
+              onError={(e) => {
+                // Fallback to default image if loading fails
+                e.currentTarget.src = DEFAULT_IMG;
+              }}
             />
           </div>
 
@@ -480,6 +509,9 @@ function App() {
     try {
       const fullArticles = await fetchNews(20);
       if (fullArticles.length > 5) {
+        // Preload images for better page flipping experience (background only)
+        setTimeout(() => preloadImages(fullArticles), 500);
+        
         // Only update if user is still on first page to avoid flicker
         setTimeout(() => {
           setArticles(fullArticles);
@@ -499,6 +531,9 @@ function App() {
     try {
       const moreArticles = await fetchNews(newLimit);
       if (moreArticles.length > 0) {
+        // Preload new images silently
+        setTimeout(() => preloadImages(moreArticles.slice(currentLimit)), 200);
+        
         setArticles(moreArticles);
         setCurrentLimit(newLimit);
         console.log(`Loaded ${newLimit} articles total`);
@@ -518,6 +553,9 @@ function App() {
         setArticles(newsArticles);
         setCurrentLimit(5);
         
+        // Preload initial images silently in background
+        setTimeout(() => preloadImages(newsArticles), 500);
+        
         // Start background loading of full 20 articles after a longer delay
         setTimeout(() => {
           backgroundLoadFullArticles();
@@ -533,15 +571,20 @@ function App() {
 
   const handleFlip = (e: any) => {
     const pageNum = e.data + 1;
+    console.log(`Flipped to page ${pageNum}, current limit: ${currentLimit}`);
     
     // Load more articles as user progresses
     if (pageNum >= 4 && currentLimit < 50) {
+      console.log('Triggering load of 50 articles');
       loadMoreArticles(50);
     } else if (pageNum >= 31 && currentLimit < 100) {
+      console.log('Triggering load of 100 articles');
       loadMoreArticles(100);
     } else if (pageNum >= 71 && currentLimit < 200) {
+      console.log('Triggering load of 200 articles');
       loadMoreArticles(200);
     } else if (pageNum >= 151 && currentLimit < 400) {
+      console.log('Triggering load of 400 articles');
       loadMoreArticles(400);
     }
   };
