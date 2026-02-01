@@ -6,8 +6,46 @@ const DEFAULT_IMG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9I
 
 const API_BASE = 'https://news-scraper-api-ai-am7i.onrender.com';
 
+// Cache utilities
+const CACHE_KEY = 'news_articles_cache';
+const CACHE_TIMESTAMP_KEY = 'news_cache_timestamp';
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+const getCachedArticles = () => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    
+    if (cached && timestamp) {
+      const age = Date.now() - parseInt(timestamp);
+      if (age < CACHE_DURATION) {
+        return JSON.parse(cached);
+      }
+    }
+  } catch (error) {
+    console.error('Cache read error:', error);
+  }
+  return null;
+};
+
+const setCachedArticles = (articles: any[]) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(articles));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+  } catch (error) {
+    console.error('Cache write error:', error);
+  }
+};
+
 // Fetch news articles from API
 const fetchNews = async (limit = 50) => {
+  // Check cache first
+  const cached = getCachedArticles();
+  if (cached && cached.length >= limit) {
+    console.log('Using cached articles');
+    return cached.slice(0, limit);
+  }
+
   try {
     const response = await fetch(`${API_BASE}/articles?limit=${limit}`, {
       method: 'GET',
@@ -28,7 +66,7 @@ const fetchNews = async (limit = 50) => {
       throw new Error('No articles found');
     }
     
-    return data.articles.map((article: any) => ({
+    const articles = data.articles.map((article: any) => ({
       id: article.id,
       headline: article.title,
       date: new Date(article.scraped_at).toLocaleDateString('en-US', {
@@ -39,9 +77,15 @@ const fetchNews = async (limit = 50) => {
       img: article.image_url === 'No image found' ? null : article.image_url,
       content: article.content
     }));
+
+    // Cache the results
+    setCachedArticles(articles);
+    
+    return articles;
   } catch (error) {
     console.error('Failed to fetch news:', error);
-    return [];
+    // Return cached data as fallback if available
+    return cached || [];
   }
 };
 
@@ -422,9 +466,23 @@ const NewspaperPage = React.forwardRef<HTMLDivElement, { article: any, pageNum: 
 function App() {
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentLimit, setCurrentLimit] = useState(20);
+  const [currentLimit, setCurrentLimit] = useState(5);
   const [modalArticle, setModalArticle] = useState<any>(null);
   const flipBookRef = useRef<any>(null);
+
+  // Background load full articles after initial load
+  const backgroundLoadFullArticles = async () => {
+    try {
+      const fullArticles = await fetchNews(20);
+      if (fullArticles.length > 5) {
+        setArticles(fullArticles);
+        setCurrentLimit(20);
+        console.log('Background loaded 20 articles');
+      }
+    } catch (error) {
+      console.error('Background load error:', error);
+    }
+  };
 
   // Load more articles when needed
   const loadMoreArticles = async (newLimit: number) => {
@@ -447,9 +505,15 @@ function App() {
     const loadNews = async () => {
       setLoading(true);
       try {
-        const newsArticles = await fetchNews(20);
+        // Load only 5 articles initially for fast startup
+        const newsArticles = await fetchNews(5);
         setArticles(newsArticles);
-        setCurrentLimit(20);
+        setCurrentLimit(5);
+        
+        // Start background loading of full 20 articles after a short delay
+        setTimeout(() => {
+          backgroundLoadFullArticles();
+        }, 100);
       } catch (error) {
         console.error('Error loading news:', error);
       } finally {
@@ -462,7 +526,8 @@ function App() {
   const handleFlip = (e: any) => {
     const pageNum = e.data + 1;
     
-    if (pageNum >= 11 && currentLimit < 50) {
+    // Load more articles as user progresses
+    if (pageNum >= 4 && currentLimit < 50) {
       loadMoreArticles(50);
     } else if (pageNum >= 31 && currentLimit < 100) {
       loadMoreArticles(100);
@@ -506,7 +571,11 @@ function App() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
-      <button className="refresh-btn" onClick={() => window.location.reload(true)} title="Refresh">
+      <button className="refresh-btn" onClick={() => {
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+        window.location.reload(true);
+      }} title="Refresh">
         ↻
       </button>
       <div className="viewport-stage">
