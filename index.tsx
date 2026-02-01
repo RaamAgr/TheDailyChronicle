@@ -506,7 +506,7 @@ function App() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
-      <button className="refresh-btn" onClick={() => window.location.reload()} title="Refresh">
+      <button className="refresh-btn" onClick={() => window.location.reload(true)} title="Refresh">
         ↻
       </button>
       <div className="viewport-stage">
