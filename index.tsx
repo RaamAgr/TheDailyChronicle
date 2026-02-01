@@ -322,6 +322,30 @@ body {
   text-align: justify;
 }
 
+.refresh-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(26, 26, 26, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  color: #f5f3ed;
+  cursor: pointer;
+  z-index: 100;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: rgba(26, 26, 26, 1);
+  transform: scale(1.05);
+}
+
 @media (max-width: 480px) {
   .title {
     font-size: 18px;
@@ -482,6 +506,9 @@ function App() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
+      <button className="refresh-btn" onClick={() => window.location.reload()} title="Refresh">
+        ↻
+      </button>
       <div className="viewport-stage">
         <HTMLFlipBook
           ref={flipBookRef}
