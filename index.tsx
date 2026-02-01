@@ -119,6 +119,11 @@ body {
   box-shadow: 0 8px 30px rgba(0,0,0,0.3);
   border-radius: 8px;
   overflow: hidden;
+  transition: none !important;
+}
+
+.flip-book * {
+  transition: none !important;
 }
 
 .page-sheet {
@@ -475,9 +480,12 @@ function App() {
     try {
       const fullArticles = await fetchNews(20);
       if (fullArticles.length > 5) {
-        setArticles(fullArticles);
-        setCurrentLimit(20);
-        console.log('Background loaded 20 articles');
+        // Only update if user is still on first page to avoid flicker
+        setTimeout(() => {
+          setArticles(fullArticles);
+          setCurrentLimit(20);
+          console.log('Background loaded 20 articles');
+        }, 1000); // Delay to ensure user sees initial content
       }
     } catch (error) {
       console.error('Background load error:', error);
@@ -510,10 +518,10 @@ function App() {
         setArticles(newsArticles);
         setCurrentLimit(5);
         
-        // Start background loading of full 20 articles after a short delay
+        // Start background loading of full 20 articles after a longer delay
         setTimeout(() => {
           backgroundLoadFullArticles();
-        }, 100);
+        }, 2000);
       } catch (error) {
         console.error('Error loading news:', error);
       } finally {
