@@ -92,6 +92,7 @@ const fetchNews = async (limit = 50) => {
         month: 'long',
         day: 'numeric'
       }),
+      source: article.source,
       img: article.image_url === 'No image found' ? null : article.image_url,
       content: article.content
     }));
@@ -196,8 +197,18 @@ body {
   font-size: 10px;
   color: #888;
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   font-style: italic;
+}
+
+.source {
+  font-size: 9px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .image-container {
@@ -276,6 +287,11 @@ body {
   
   .date {
     font-size: 11px;
+    margin-bottom: 8px;
+  }
+  
+  .source {
+    font-size: 10px;
     margin-bottom: 18px;
   }
 }
@@ -351,11 +367,32 @@ body {
 }
 
 .modal-header {
-  padding: 20px;
+  padding: 20px 20px 10px 20px;
   border-bottom: 1px solid #e0e0e0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+}
+
+.modal-meta {
+  padding: 0 20px 15px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.modal-date {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+  margin-bottom: 5px;
+}
+
+.modal-source {
+  font-size: 10px;
+  color: #666;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .modal-title {
@@ -458,6 +495,8 @@ const NewspaperPage = React.forwardRef<HTMLDivElement, { article: any, pageNum: 
           <h1 className="title">{article.headline}</h1>
           
           <div className="date">{article.date}</div>
+          
+          <div className="source">{article.source}</div>
           
           <div className="image-container">
             <img
@@ -674,6 +713,10 @@ function App() {
             <div className="modal-header">
               <h2 className="modal-title">{modalArticle.headline}</h2>
               <button className="close-btn" onClick={() => setModalArticle(null)}>×</button>
+            </div>
+            <div className="modal-meta">
+              <div className="modal-date">{modalArticle.date}</div>
+              <div className="modal-source">{modalArticle.source}</div>
             </div>
             <div className="modal-body">
               <div className="image-container" style={{ marginBottom: '15px' }}>
