@@ -233,6 +233,7 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-right: 5px;
+  white-space: pre-wrap;
 }
 
 .description::-webkit-scrollbar {
@@ -426,6 +427,7 @@ body {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
+  white-space: pre-wrap;
 }
 
 .modal-body p {
@@ -708,11 +710,11 @@ function App() {
       </div>
       
       {modalArticle && (
-        <div className="modal-overlay" onClick={() => setModalArticle(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseUp={() => setModalArticle(null)}>
+          <div className="modal-content" onMouseUp={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">{modalArticle.headline}</h2>
-              <button className="close-btn" onClick={() => setModalArticle(null)}>×</button>
+              <button className="close-btn" onMouseUp={() => setModalArticle(null)}>×</button>
             </div>
             <div className="modal-meta">
               <div className="modal-date">{modalArticle.date}</div>
@@ -728,7 +730,7 @@ function App() {
               </div>
               {modalArticle.content}
             </div>
-            <button className="modal-close-btn" onClick={() => setModalArticle(null)}>
+            <button className="modal-close-btn" onMouseUp={() => setModalArticle(null)}>
               Close
             </button>
           </div>
