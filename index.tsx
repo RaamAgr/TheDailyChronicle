@@ -710,11 +710,11 @@ function App() {
       </div>
       
       {modalArticle && (
-        <div className="modal-overlay" onMouseUp={() => setModalArticle(null)}>
-          <div className="modal-content" onMouseUp={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => setModalArticle(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">{modalArticle.headline}</h2>
-              <button className="close-btn" onMouseUp={() => setModalArticle(null)}>×</button>
+              <button className="close-btn" onClick={() => setModalArticle(null)}>×</button>
             </div>
             <div className="modal-meta">
               <div className="modal-date">{modalArticle.date}</div>
@@ -730,7 +730,7 @@ function App() {
               </div>
               {modalArticle.content}
             </div>
-            <button className="modal-close-btn" onMouseUp={() => setModalArticle(null)}>
+            <button className="modal-close-btn" onClick={() => setModalArticle(null)}>
               Close
             </button>
           </div>
