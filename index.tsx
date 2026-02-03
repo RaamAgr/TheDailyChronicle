@@ -451,7 +451,7 @@ body {
 
 .refresh-btn {
   position: fixed;
-  bottom: 0px;
+  bottom: calc(50vh - min(300px, 42.5vh) - 50px);
   right: calc(50vw - min(200px, 45vw));
   background: none;
   border: none;
@@ -474,7 +474,7 @@ body {
 
 .menu-dropdown {
   position: fixed;
-  bottom: 45px;
+  bottom: calc(50vh - min(300px, 42.5vh) - 5px);
   right: calc(50vw - min(200px, 45vw));
   background: rgba(26, 26, 26, 0.9);
   border-radius: 8px;
@@ -561,15 +561,12 @@ body {
   }
   
   .refresh-btn {
-    bottom: -5px;
+    bottom: calc(50vh - 42.5vh - 50px);
     right: calc(50vw - 45vw);
-    width: 35px;
-    height: 35px;
-    font-size: 14px;
   }
   
   .menu-dropdown {
-    bottom: 35px;
+    bottom: calc(50vh - 42.5vh - 5px);
     right: calc(50vw - 45vw);
   }
 }
