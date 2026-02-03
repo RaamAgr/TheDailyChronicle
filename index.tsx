@@ -4,7 +4,7 @@ import HTMLFlipBook from 'react-pageflip';
 
 const DEFAULT_IMG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5ld3NwYXBlciBJbWFnZTwvdGV4dD48L3N2Zz4=';
 
-const API_BASE = 'https://news-scraper-api-ai-am7i.onrender.com';
+const API_BASE = 'https://news-scraper-api-ai-1.onrender.com';
 
 // Cache utilities
 const CACHE_KEY = 'news_articles_cache';
