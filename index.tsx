@@ -426,6 +426,29 @@ body {
   text-align: justify;
 }
 
+.full-coverage-btn {
+  padding: 10px 20px;
+  background: rgba(26, 26, 26, 0.9);
+  border: none;
+  border-radius: 12px;
+  color: #f5f3ed;
+  font-size: 12px;
+  font-family: 'Playfair Display', serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: 20px auto 10px auto;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 120px;
+}
+
+.full-coverage-btn:hover {
+  background: rgba(26, 26, 26, 1);
+  transform: scale(1.05);
+}
+
 .refresh-btn {
   position: fixed;
   bottom: 0px;
@@ -614,13 +637,32 @@ function App() {
   const [uniqueMode, setUniqueMode] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [modalArticle, setModalArticle] = useState<any>(null);
+  const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
+  const [showTimeline, setShowTimeline] = useState(false);
   const flipBookRef = useRef<any>(null);
   const totalPagesRef = useRef(0);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
 
-  // Update total pages ref when articles change
-  useEffect(() => {
-    totalPagesRef.current = articles.length;
-  }, [articles.length]);
+  // Fetch related articles for timeline
+  const fetchRelatedArticles = async (headline: string) => {
+    try {
+      const allArticles = await fetchNews(200, undefined, false);
+      const related = allArticles.filter(article => 
+        article.headline.toLowerCase().includes(headline.split(' ')[0].toLowerCase()) ||
+        article.headline.toLowerCase().includes(headline.split(' ')[1]?.toLowerCase() || '')
+      ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      setRelatedArticles(related);
+    } catch (error) {
+      console.error('Error fetching related articles:', error);
+    }
+  };
+
+  // Handle read more with related articles fetch
+  const handleReadMore = (article: any) => {
+    setModalArticle(article);
+    setShowTimeline(false);
+    fetchRelatedArticles(article.headline);
+  };
 
   // Load more articles using max_id pagination
   const loadMoreArticles = async () => {
@@ -769,7 +811,7 @@ function App() {
               article={article}
               pageNum={index + 1}
               total={totalPagesRef.current}
-              onReadMore={setModalArticle}
+              onReadMore={handleReadMore}
             />
           ))}
         </HTMLFlipBook>
@@ -786,15 +828,47 @@ function App() {
               <div className="modal-date">{modalArticle.date}</div>
               <div className="modal-source">{modalArticle.source}</div>
             </div>
-            <div className="modal-body">
-              <div className="image-container" style={{ marginBottom: '15px' }}>
-                <img
-                  src={modalArticle.img || DEFAULT_IMG}
-                  alt="Story Visual"
-                  style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '4px' }}
-                />
-              </div>
-              {modalArticle.content}
+            <div className="modal-body" ref={modalBodyRef}>
+              {showTimeline ? (
+                <div>
+                  <h3 style={{ marginBottom: '20px', textAlign: 'center', color: '#1a1a1a' }}>Timeline Coverage</h3>
+                  {relatedArticles.map((article, index) => (
+                    <div key={article.id} style={{ marginBottom: '25px', paddingBottom: '20px', borderBottom: '1px solid #e0e0e0' }}>
+                      <div style={{ fontSize: '10px', color: '#888', marginBottom: '5px' }}>{article.date}</div>
+                      <div style={{ fontSize: '9px', color: '#666', marginBottom: '8px', textTransform: 'uppercase' }}>{article.source}</div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#1a1a1a' }}>{article.headline}</h4>
+                      <div style={{ marginBottom: '10px' }}>
+                        <img
+                          src={article.img || DEFAULT_IMG}
+                          alt="Story Visual"
+                          style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '4px' }}
+                        />
+                      </div>
+                      <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#333' }}>{article.content}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <div className="image-container" style={{ marginBottom: '15px' }}>
+                    <img
+                      src={modalArticle.img || DEFAULT_IMG}
+                      alt="Story Visual"
+                      style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '4px' }}
+                    />
+                  </div>
+                  {modalArticle.content}
+                  {/* <button className="full-coverage-btn" onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTimeline(true);
+                    if (modalBodyRef.current) {
+                      modalBodyRef.current.scrollTop = 0;
+                    }
+                  }}>
+                    Full Coverage
+                  </button> */}
+                </div>
+              )}
             </div>
             <button className="modal-close-btn" onClick={() => setModalArticle(null)}>
               Close
