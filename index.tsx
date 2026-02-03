@@ -55,15 +55,18 @@ const preloadImages = (articles: any[]) => {
 };
 
 // Fetch news articles from API with proper pagination
-const fetchNews = async (limit = 50, maxId?: number) => {
+const fetchNews = async (limit = 50, maxId?: number, uniqueStory = false) => {
   // Build URL with proper pagination
   let url = `${API_BASE}/articles?limit=${limit}`;
   if (maxId) {
     url += `&max_id=${maxId}`;
   }
+  if (uniqueStory) {
+    url += `&unique_story=true`;
+  }
 
   try {
-    console.log(`Fetching ${limit} articles${maxId ? ` with max_id=${maxId}` : ''}`);
+    console.log(`Fetching ${limit} articles${maxId ? ` with max_id=${maxId}` : ''}${uniqueStory ? ' (unique stories)' : ''}`);
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -425,14 +428,13 @@ body {
 
 .refresh-btn {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  background: rgba(26, 26, 26, 0.8);
+  bottom: 0px;
+  right: calc(50vw - min(200px, 45vw));
+  background: none;
   border: none;
-  border-radius: 50%;
   width: 40px;
   height: 40px;
-  color: #f5f3ed;
+  color: #666;
   cursor: pointer;
   z-index: 100;
   font-size: 16px;
@@ -443,8 +445,74 @@ body {
 }
 
 .refresh-btn:hover {
-  background: rgba(26, 26, 26, 1);
+  color: #333;
   transform: scale(1.05);
+}
+
+.menu-dropdown {
+  position: fixed;
+  bottom: 45px;
+  right: calc(50vw - min(200px, 45vw));
+  background: rgba(26, 26, 26, 0.9);
+  border-radius: 8px;
+  padding: 8px 0;
+  z-index: 101;
+  min-width: 120px;
+  backdrop-filter: blur(10px);
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: #f5f3ed;
+  font-size: 12px;
+  font-family: 'Playfair Display', serif;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.feed-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 4px 8px;
+  color: #333;
+  cursor: pointer;
+  z-index: 100;
+  font-size: 9px;
+  font-family: 'Playfair Display', serif;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.feed-toggle:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.feed-toggle .active {
+  color: #1a1a1a;
+  opacity: 1;
+}
+
+.feed-toggle .inactive {
+  color: #999;
+  opacity: 0.7;
 }
 
 @media (max-width: 480px) {
@@ -468,10 +536,23 @@ body {
   .modal-body {
     font-size: 13px;
   }
+  
+  .refresh-btn {
+    bottom: -5px;
+    right: calc(50vw - 45vw);
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+  
+  .menu-dropdown {
+    bottom: 35px;
+    right: calc(50vw - 45vw);
+  }
 }
 `;
 
-const NewspaperPage = React.forwardRef<HTMLDivElement, { article: any, pageNum: number, total: number, onReadMore: (article: any) => void }>(  ({ article, pageNum, total, onReadMore }, ref) => {
+const NewspaperPage = React.memo(React.forwardRef<HTMLDivElement, { article: any, pageNum: number, total: number, onReadMore: (article: any) => void }>(  ({ article, pageNum, total, onReadMore }, ref) => {
     if (!article) return null;
 
     const isLongArticle = article.content.length > 800;
@@ -524,14 +605,22 @@ const NewspaperPage = React.forwardRef<HTMLDivElement, { article: any, pageNum: 
       </div>
     );
   }
-);
+));
 
 function App() {
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [uniqueMode, setUniqueMode] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [modalArticle, setModalArticle] = useState<any>(null);
   const flipBookRef = useRef<any>(null);
+  const totalPagesRef = useRef(0);
+
+  // Update total pages ref when articles change
+  useEffect(() => {
+    totalPagesRef.current = articles.length;
+  }, [articles.length]);
 
   // Load more articles using max_id pagination
   const loadMoreArticles = async () => {
@@ -542,12 +631,16 @@ function App() {
     const maxId = lastArticleId - 1;
     
     try {
-      const moreArticles = await fetchNews(50, maxId);
+      const moreArticles = await fetchNews(50, maxId, uniqueMode);
       if (moreArticles.length > 0) {
-        setArticles(prev => [...prev, ...moreArticles]);
-        console.log(`Loaded ${moreArticles.length} more articles, total: ${articles.length + moreArticles.length}`);
-        
-        setTimeout(() => preloadImages(moreArticles), 200);
+        // Use functional update to prevent re-render flicker
+        setArticles(prev => {
+          const newArticles = [...prev, ...moreArticles];
+          // Preload images for new articles only
+          setTimeout(() => preloadImages(moreArticles), 200);
+          return newArticles;
+        });
+        console.log(`Loaded ${moreArticles.length} more articles`);
       }
     } catch (error) {
       console.error('Error loading more articles:', error);
@@ -562,7 +655,7 @@ function App() {
       setLoading(true);
       try {
         // Load initial articles
-        const newsArticles = await fetchNews(20);
+        const newsArticles = await fetchNews(20, undefined, uniqueMode);
         setArticles(newsArticles);
         
         // Preload initial images silently in background
@@ -574,7 +667,7 @@ function App() {
       }
     };
     loadNews();
-  }, []);
+  }, [uniqueMode]);
 
   const handleFlip = (e: any) => {
     const pageNum = e.data + 1;
@@ -622,13 +715,26 @@ function App() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
-      <button className="refresh-btn" onClick={() => {
-        localStorage.removeItem(CACHE_KEY);
-        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-        window.location.reload(true);
-      }} title="Refresh">
-        ↻
+      <button className="refresh-btn" onClick={() => setShowMenu(!showMenu)} title="Menu">
+        ⋯
       </button>
+      {showMenu && (
+        <div className="menu-dropdown">
+          <button className="menu-item" onClick={() => {
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+            window.location.reload(true);
+          }}>
+            Refresh
+          </button>
+          <button className="menu-item" onClick={() => {
+            setUniqueMode(!uniqueMode);
+            setShowMenu(false);
+          }}>
+            {uniqueMode ? 'Show All Stories' : 'Show Unique Stories'}
+          </button>
+        </div>
+      )}
       <div className="viewport-stage">
         <HTMLFlipBook
           ref={flipBookRef}
@@ -655,13 +761,14 @@ function App() {
           swipeDistance={50}
           showPageCorners={true}
           disableFlipByClick={false}
+          key={`flipbook-${uniqueMode}`}
         >
           {articles.map((article, index) => (
             <NewspaperPage
               key={article.id}
               article={article}
               pageNum={index + 1}
-              total={articles.length}
+              total={totalPagesRef.current}
               onReadMore={setModalArticle}
             />
           ))}
