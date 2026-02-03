@@ -54,18 +54,17 @@ const preloadImages = (articles: any[]) => {
   });
 };
 
-// Fetch news articles from API
-const fetchNews = async (limit = 50) => {
-  // Check cache first, but only if we're asking for same or fewer articles
-  const cached = getCachedArticles();
-  if (cached && cached.length >= limit) {
-    console.log(`Using cached articles (${cached.length} available, ${limit} requested)`);
-    return cached.slice(0, limit);
+// Fetch news articles from API with proper pagination
+const fetchNews = async (limit = 50, maxId?: number) => {
+  // Build URL with proper pagination
+  let url = `${API_BASE}/articles?limit=${limit}`;
+  if (maxId) {
+    url += `&max_id=${maxId}`;
   }
 
   try {
-    console.log(`Fetching ${limit} articles from API`);
-    const response = await fetch(`${API_BASE}/articles?limit=${limit}`, {
+    console.log(`Fetching ${limit} articles${maxId ? ` with max_id=${maxId}` : ''}`);
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -81,7 +80,7 @@ const fetchNews = async (limit = 50) => {
     const data = await response.json();
     
     if (!data.articles || data.articles.length === 0) {
-      throw new Error('No articles found');
+      return [];
     }
     
     const articles = data.articles.map((article: any) => ({
@@ -96,21 +95,10 @@ const fetchNews = async (limit = 50) => {
       img: article.image_url === 'No image found' ? null : article.image_url,
       content: article.content
     }));
-
-    // Cache the results only if we got more articles than before
-    if (!cached || articles.length > cached.length) {
-      setCachedArticles(articles);
-      console.log(`Cached ${articles.length} articles`);
-    }
     
     return articles;
   } catch (error) {
     console.error('Failed to fetch news:', error);
-    // Return cached data as fallback if available
-    if (cached) {
-      console.log('Using cached articles as fallback');
-      return cached.slice(0, limit);
-    }
     return [];
   }
 };
@@ -541,46 +529,30 @@ const NewspaperPage = React.forwardRef<HTMLDivElement, { article: any, pageNum: 
 function App() {
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentLimit, setCurrentLimit] = useState(5);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [modalArticle, setModalArticle] = useState<any>(null);
   const flipBookRef = useRef<any>(null);
 
-  // Background load full articles after initial load
-  const backgroundLoadFullArticles = async () => {
-    try {
-      const fullArticles = await fetchNews(20);
-      if (fullArticles.length > 5) {
-        // Preload images for better page flipping experience (background only)
-        setTimeout(() => preloadImages(fullArticles), 500);
-        
-        // Only update if user is still on first page to avoid flicker
-        setTimeout(() => {
-          setArticles(fullArticles);
-          setCurrentLimit(20);
-          console.log('Background loaded 20 articles');
-        }, 1000); // Delay to ensure user sees initial content
-      }
-    } catch (error) {
-      console.error('Background load error:', error);
-    }
-  };
-
-  // Load more articles when needed
-  const loadMoreArticles = async (newLimit: number) => {
-    if (newLimit <= currentLimit) return;
+  // Load more articles using max_id pagination
+  const loadMoreArticles = async () => {
+    if (articles.length === 0 || loadingMore) return;
+    
+    setLoadingMore(true);
+    const lastArticleId = articles[articles.length - 1].id;
+    const maxId = lastArticleId - 1;
     
     try {
-      const moreArticles = await fetchNews(newLimit);
+      const moreArticles = await fetchNews(50, maxId);
       if (moreArticles.length > 0) {
-        // Preload new images silently
-        setTimeout(() => preloadImages(moreArticles.slice(currentLimit)), 200);
+        setArticles(prev => [...prev, ...moreArticles]);
+        console.log(`Loaded ${moreArticles.length} more articles, total: ${articles.length + moreArticles.length}`);
         
-        setArticles(moreArticles);
-        setCurrentLimit(newLimit);
-        console.log(`Loaded ${newLimit} articles total`);
+        setTimeout(() => preloadImages(moreArticles), 200);
       }
     } catch (error) {
       console.error('Error loading more articles:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -589,18 +561,12 @@ function App() {
     const loadNews = async () => {
       setLoading(true);
       try {
-        // Load only 5 articles initially for fast startup
-        const newsArticles = await fetchNews(5);
+        // Load initial articles
+        const newsArticles = await fetchNews(20);
         setArticles(newsArticles);
-        setCurrentLimit(5);
         
         // Preload initial images silently in background
         setTimeout(() => preloadImages(newsArticles), 500);
-        
-        // Start background loading of full 20 articles after a longer delay
-        setTimeout(() => {
-          backgroundLoadFullArticles();
-        }, 2000);
       } catch (error) {
         console.error('Error loading news:', error);
       } finally {
@@ -612,21 +578,14 @@ function App() {
 
   const handleFlip = (e: any) => {
     const pageNum = e.data + 1;
-    console.log(`Flipped to page ${pageNum}, current limit: ${currentLimit}`);
+    const totalPages = articles.length;
     
-    // Load more articles as user progresses
-    if (pageNum >= 4 && currentLimit < 50) {
-      console.log('Triggering load of 50 articles');
-      loadMoreArticles(50);
-    } else if (pageNum >= 31 && currentLimit < 100) {
-      console.log('Triggering load of 100 articles');
-      loadMoreArticles(100);
-    } else if (pageNum >= 71 && currentLimit < 200) {
-      console.log('Triggering load of 200 articles');
-      loadMoreArticles(200);
-    } else if (pageNum >= 151 && currentLimit < 400) {
-      console.log('Triggering load of 400 articles');
-      loadMoreArticles(400);
+    if (loadingMore) return;
+    
+    // First load at page 5, then 25 pages before end
+    if ((totalPages === 20 && pageNum >= 5) || (totalPages > 20 && pageNum >= totalPages - 25)) {
+      console.log(`Page ${pageNum}/${totalPages}: Loading more articles`);
+      loadMoreArticles();
     }
   };
 
