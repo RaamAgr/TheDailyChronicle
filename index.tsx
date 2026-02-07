@@ -691,13 +691,11 @@ function App() {
 
   // Handle share article
   const handleShare = async (article: any) => {
-    const shareText = `${article.headline}\n\n${article.url}`;
-    
     if (navigator.share && window.isSecureContext) {
       try {
         await navigator.share({
           title: article.headline,
-          text: shareText,
+          text: article.headline,
           url: article.url
         });
       } catch (error: any) {
@@ -707,6 +705,7 @@ function App() {
       }
     } else {
       // Fallback: copy to clipboard
+      const shareText = `${article.headline}\n\n${article.url}`;
       const textArea = document.createElement('textarea');
       textArea.value = shareText;
       textArea.style.position = 'fixed';
