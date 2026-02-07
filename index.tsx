@@ -419,6 +419,8 @@ body {
   line-height: 1.5;
   color: #333;
   white-space: pre-wrap;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-body p {
@@ -654,6 +656,39 @@ function App() {
     }
   };
 
+  // Handle share article
+  const handleShare = async (article: any) => {
+    const shareText = `${article.headline}\n${article.source}`;
+    
+    if (navigator.share && window.isSecureContext) {
+      try {
+        await navigator.share({
+          title: article.headline,
+          text: shareText
+        });
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          alert('Could not share article');
+        }
+      }
+    } else {
+      // Fallback: copy to clipboard
+      const textArea = document.createElement('textarea');
+      textArea.value = shareText;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        alert('Article copied to clipboard!');
+      } catch (error) {
+        alert('Could not copy article');
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
   // Handle read more with related articles fetch
   const handleReadMore = (article: any) => {
     setModalArticle(article);
@@ -675,11 +710,9 @@ function App() {
         // Use functional update to prevent re-render flicker
         setArticles(prev => {
           const newArticles = [...prev, ...moreArticles];
-          // Preload images for new articles only
           setTimeout(() => preloadImages(moreArticles), 200);
           return newArticles;
         });
-        console.log(`Loaded ${moreArticles.length} more articles`);
       }
     } catch (error) {
       console.error('Error loading more articles:', error);
@@ -714,9 +747,7 @@ function App() {
     
     if (loadingMore) return;
     
-    // First load at page 5, then 25 pages before end
     if ((totalPages === 20 && pageNum >= 5) || (totalPages > 20 && pageNum >= totalPages - 25)) {
-      console.log(`Page ${pageNum}/${totalPages}: Loading more articles`);
       loadMoreArticles();
     }
   };
@@ -771,6 +802,14 @@ function App() {
             setShowMenu(false);
           }}>
             {uniqueMode ? 'Show All Stories' : 'Show Unique Stories'}
+          </button>
+          <button className="menu-item" onClick={() => {
+            if (articles.length > 0) {
+              handleShare(articles[0]);
+            }
+            setShowMenu(false);
+          }}>
+            Share Article
           </button>
         </div>
       )}
@@ -855,15 +894,6 @@ function App() {
                     />
                   </div>
                   {modalArticle.content}
-                  {/* <button className="full-coverage-btn" onClick={(e) => {
-                    e.stopPropagation();
-                    setShowTimeline(true);
-                    if (modalBodyRef.current) {
-                      modalBodyRef.current.scrollTop = 0;
-                    }
-                  }}>
-                    Full Coverage
-                  </button> */}
                 </div>
               )}
             </div>
