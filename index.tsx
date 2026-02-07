@@ -96,7 +96,8 @@ const fetchNews = async (limit = 50, maxId?: number, uniqueStory = false) => {
       }),
       source: article.source,
       img: article.image_url === 'No image found' ? null : article.image_url,
-      content: article.content
+      content: article.content,
+      url: article.url
     }));
     
     return articles;
@@ -451,9 +452,36 @@ body {
   transform: scale(1.05);
 }
 
+.share-btn {
+  position: fixed;
+  top: calc(50vh + min(300px, 42.5vh) + 10px);
+  right: calc(50vw - min(200px, 45vw) + 40px);
+  background: none;
+  border: none;
+  width: 40px;
+  height: 40px;
+  color: #666;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.share-btn:hover {
+  color: #333;
+  transform: scale(1.05);
+}
+
+.share-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
 .refresh-btn {
   position: fixed;
-  bottom: calc(50vh - min(300px, 42.5vh) - 50px);
+  top: calc(50vh + min(300px, 42.5vh) + 10px);
   right: calc(50vw - min(200px, 45vw));
   background: none;
   border: none;
@@ -476,7 +504,7 @@ body {
 
 .menu-dropdown {
   position: fixed;
-  bottom: calc(50vh - min(300px, 42.5vh) - 5px);
+  bottom: calc(100vh - (50vh + min(300px, 42.5vh) + 10px));
   right: calc(50vw - min(200px, 45vw));
   background: rgba(26, 26, 26, 0.9);
   border-radius: 8px;
@@ -562,13 +590,18 @@ body {
     font-size: 13px;
   }
   
+  .share-btn {
+    top: calc(50vh + 42.5vh + 10px);
+    right: calc(50vw - 45vw + 40px);
+  }
+  
   .refresh-btn {
-    bottom: calc(50vh - 42.5vh - 50px);
+    top: calc(50vh + 42.5vh + 10px);
     right: calc(50vw - 45vw);
   }
   
   .menu-dropdown {
-    bottom: calc(50vh - 42.5vh - 5px);
+    bottom: calc(100vh - (50vh + 42.5vh + 10px));
     right: calc(50vw - 45vw);
   }
 }
@@ -658,13 +691,14 @@ function App() {
 
   // Handle share article
   const handleShare = async (article: any) => {
-    const shareText = `${article.headline}\n${article.source}`;
+    const shareText = `${article.headline}\n\n${article.url}`;
     
     if (navigator.share && window.isSecureContext) {
       try {
         await navigator.share({
           title: article.headline,
-          text: shareText
+          text: shareText,
+          url: article.url
         });
       } catch (error: any) {
         if (error.name !== 'AbortError') {
@@ -681,7 +715,7 @@ function App() {
       textArea.select();
       try {
         document.execCommand('copy');
-        alert('Article copied to clipboard!');
+        alert('Article link copied to clipboard!');
       } catch (error) {
         alert('Could not copy article');
       }
@@ -785,6 +819,11 @@ function App() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
+      <button className="share-btn" onClick={() => articles.length > 0 && handleShare(articles[0])} title="Share">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+        </svg>
+      </button>
       <button className="refresh-btn" onClick={() => setShowMenu(!showMenu)} title="Menu">
         ⋯
       </button>
@@ -802,14 +841,6 @@ function App() {
             setShowMenu(false);
           }}>
             {uniqueMode ? 'Show All Stories' : 'Show Unique Stories'}
-          </button>
-          <button className="menu-item" onClick={() => {
-            if (articles.length > 0) {
-              handleShare(articles[0]);
-            }
-            setShowMenu(false);
-          }}>
-            Share Article
           </button>
         </div>
       )}
