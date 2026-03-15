@@ -4,7 +4,7 @@ import HTMLFlipBook from 'react-pageflip';
 
 const DEFAULT_IMG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5ld3NwYXBlciBJbWFnZTwvdGV4dD48L3N2Zz4=';
 
-const API_BASE = 'https://news-scraper-api-ai-am7i.onrender.com';
+const API_BASE = 'https://news-scraper-api-ai-ezal.onrender.com';
 
 // Cache utilities
 const CACHE_KEY = 'news_articles_cache';
@@ -97,6 +97,7 @@ const fetchNews = async (limit = 50, maxId?: number, uniqueStory = false) => {
       source: article.source,
       img: article.image_url === 'No image found' ? null : article.image_url,
       content: article.content,
+      rephrasedContent: article.rephrased_article,
       url: article.url
     }));
     
@@ -169,7 +170,7 @@ body {
 
 .page-content {
   flex: 1;
-  padding: 20px 20px 60px 20px;
+  padding: 20px 20px 30px 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -197,7 +198,7 @@ body {
   font-size: 9px;
   color: #666;
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -205,7 +206,7 @@ body {
 
 .image-container {
   flex: 0 0 auto;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   text-align: center;
 }
 
@@ -252,8 +253,8 @@ body {
   left: 0;
   right: 0;
   text-align: center;
-  padding: 15px;
-  font-size: 12px;
+  padding: 8px;
+  font-size: 11px;
   color: #666;
   border-top: 1px solid #e0e0e0;
   background: rgba(245, 243, 237, 0.9);
@@ -266,7 +267,7 @@ body {
   }
   
   .page-content {
-    padding: 25px 30px 20px 30px;
+    padding: 25px 30px 30px 30px;
   }
   
   .description {
@@ -455,7 +456,7 @@ body {
 .share-btn {
   position: fixed;
   top: calc(50vh + min(300px, 42.5vh) + 10px);
-  right: calc(50vw - min(200px, 45vw) + 40px);
+  right: calc(50vw - min(200px, 45vw) + 80px);
   background: none;
   border: none;
   width: 40px;
@@ -477,6 +478,33 @@ body {
 .share-btn svg {
   width: 12px;
   height: 12px;
+}
+
+.source-btn {
+  position: fixed;
+  top: calc(50vh + min(300px, 42.5vh) + 10px);
+  right: calc(50vw - min(200px, 45vw) + 40px);
+  background: none;
+  border: none;
+  width: 40px;
+  height: 40px;
+  color: #666;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.source-btn:hover {
+  color: #333;
+  transform: scale(1.05);
+}
+
+.source-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .refresh-btn {
@@ -592,6 +620,11 @@ body {
   
   .share-btn {
     top: calc(50vh + 42.5vh + 10px);
+    right: calc(50vw - 45vw + 80px);
+  }
+  
+  .source-btn {
+    top: calc(50vh + 42.5vh + 10px);
     right: calc(50vw - 45vw + 40px);
   }
   
@@ -607,11 +640,12 @@ body {
 }
 `;
 
-const NewspaperPage = React.memo(React.forwardRef<HTMLDivElement, { article: any, pageNum: number, total: number, onReadMore: (article: any) => void }>(  ({ article, pageNum, total, onReadMore }, ref) => {
+const NewspaperPage = React.memo(React.forwardRef<HTMLDivElement, { article: any, pageNum: number, total: number, onReadMore: (article: any) => void, showOriginal: boolean }>(  ({ article, pageNum, total, onReadMore, showOriginal }, ref) => {
     if (!article) return null;
 
-    const isLongArticle = article.content.length > 800;
-    const summary = isLongArticle ? article.content.substring(0, 800) + '...' : article.content;
+    const displayContent = showOriginal ? article.content : (article.rephrasedContent || article.content);
+    const isLongArticle = displayContent.length > 800;
+    const summary = displayContent;
 
     return (
       <div ref={ref} className="page-sheet">
@@ -624,17 +658,19 @@ const NewspaperPage = React.memo(React.forwardRef<HTMLDivElement, { article: any
           
           <div className="source">{article.source}</div>
           
-          <div className="image-container">
-            <img
-              src={article.img || DEFAULT_IMG}
-              alt="Story Visual"
-              draggable="false"
-              onError={(e) => {
-                // Fallback to default image if loading fails
-                e.currentTarget.src = DEFAULT_IMG;
-              }}
-            />
-          </div>
+          {(article.img && article.img !== DEFAULT_IMG) && (
+            <div className="image-container">
+              <img
+                src={article.img}
+                alt="Story Visual"
+                draggable="false"
+                onError={(e) => {
+                  // Hide image container if loading fails
+                  e.currentTarget.parentElement!.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
 
           <div className="description">
             {summary}
@@ -667,10 +703,12 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [uniqueMode, setUniqueMode] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [modalArticle, setModalArticle] = useState<any>(null);
   const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
   const flipBookRef = useRef<any>(null);
   const totalPagesRef = useRef(0);
   const modalBodyRef = useRef<HTMLDivElement>(null);
@@ -778,6 +816,8 @@ function App() {
     const pageNum = e.data + 1;
     const totalPages = articles.length;
     
+    setCurrentPage(e.data);
+    
     if (loadingMore) return;
     
     if ((totalPages === 20 && pageNum >= 5) || (totalPages > 20 && pageNum >= totalPages - 25)) {
@@ -818,7 +858,14 @@ function App() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
-      <button className="share-btn" onClick={() => articles.length > 0 && handleShare(articles[0])} title="Share">
+      <button className="source-btn" onClick={() => articles.length > 0 && window.open(articles[currentPage].url, '_blank')} title="Read Source">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </button>
+      <button className="share-btn" onClick={() => articles.length > 0 && handleShare(articles[currentPage])} title="Share">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
         </svg>
@@ -828,6 +875,14 @@ function App() {
       </button>
       {showMenu && (
         <div className="menu-dropdown">
+          <button className="menu-item" onClick={() => {
+            if (articles.length > 0 && articles[currentPage]) {
+              window.open(articles[currentPage].url, '_blank');
+            }
+            setShowMenu(false);
+          }}>
+            Read Source
+          </button>
           <button className="menu-item" onClick={() => {
             localStorage.removeItem(CACHE_KEY);
             localStorage.removeItem(CACHE_TIMESTAMP_KEY);
@@ -840,6 +895,12 @@ function App() {
             setShowMenu(false);
           }}>
             {uniqueMode ? 'Show All Stories' : 'Show Unique Stories'}
+          </button>
+          <button className="menu-item" onClick={() => {
+            setShowOriginal(!showOriginal);
+            setShowMenu(false);
+          }}>
+            {showOriginal ? 'Show Rephrased' : 'Show Original'}
           </button>
         </div>
       )}
@@ -878,6 +939,7 @@ function App() {
               pageNum={index + 1}
               total={totalPagesRef.current}
               onReadMore={handleReadMore}
+              showOriginal={showOriginal}
             />
           ))}
         </HTMLFlipBook>
@@ -903,27 +965,31 @@ function App() {
                       <div style={{ fontSize: '10px', color: '#888', marginBottom: '5px' }}>{article.date}</div>
                       <div style={{ fontSize: '9px', color: '#666', marginBottom: '8px', textTransform: 'uppercase' }}>{article.source}</div>
                       <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#1a1a1a' }}>{article.headline}</h4>
-                      <div style={{ marginBottom: '10px' }}>
-                        <img
-                          src={article.img || DEFAULT_IMG}
-                          alt="Story Visual"
-                          style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '4px' }}
-                        />
-                      </div>
-                      <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#333' }}>{article.content}</div>
+                      {(article.img && article.img !== DEFAULT_IMG) && (
+                        <div style={{ marginBottom: '10px' }}>
+                          <img
+                            src={article.img}
+                            alt="Story Visual"
+                            style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '4px' }}
+                          />
+                        </div>
+                      )}
+                      <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#333' }}>{showOriginal ? article.content : (article.rephrasedContent || article.content)}</div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div>
-                  <div className="image-container" style={{ marginBottom: '15px' }}>
-                    <img
-                      src={modalArticle.img || DEFAULT_IMG}
-                      alt="Story Visual"
-                      style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '4px' }}
-                    />
-                  </div>
-                  {modalArticle.content}
+                  {(modalArticle.img && modalArticle.img !== DEFAULT_IMG) && (
+                    <div className="image-container" style={{ marginBottom: '15px' }}>
+                      <img
+                        src={modalArticle.img}
+                        alt="Story Visual"
+                        style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '4px' }}
+                      />
+                    </div>
+                  )}
+                  {showOriginal ? modalArticle.content : (modalArticle.rephrasedContent || modalArticle.content)}
                 </div>
               )}
             </div>
