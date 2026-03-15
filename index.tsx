@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import HTMLFlipBook from 'react-pageflip';
+import { marked } from 'marked';
 
 const DEFAULT_IMG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5ld3NwYXBlciBJbWFnZTwvdGV4dD48L3N2Zz4=';
 
@@ -646,6 +647,11 @@ const NewspaperPage = React.memo(React.forwardRef<HTMLDivElement, { article: any
     const displayContent = showOriginal ? article.content : (article.rephrasedContent || article.content);
     const isLongArticle = displayContent.length > 800;
     const summary = displayContent;
+    
+    // Parse markdown for rephrased content
+    const htmlContent = !showOriginal && article.rephrasedContent 
+      ? marked.parse(summary, { breaks: true, gfm: true }) 
+      : summary;
 
     return (
       <div ref={ref} className="page-sheet">
@@ -673,7 +679,11 @@ const NewspaperPage = React.memo(React.forwardRef<HTMLDivElement, { article: any
           )}
 
           <div className="description">
-            {summary}
+            {!showOriginal && article.rephrasedContent ? (
+              <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            ) : (
+              summary
+            )}
           </div>
         </div>
         
@@ -960,23 +970,36 @@ function App() {
               {showTimeline ? (
                 <div>
                   <h3 style={{ marginBottom: '20px', textAlign: 'center', color: '#1a1a1a' }}>Timeline Coverage</h3>
-                  {relatedArticles.map((article, index) => (
-                    <div key={article.id} style={{ marginBottom: '25px', paddingBottom: '20px', borderBottom: '1px solid #e0e0e0' }}>
-                      <div style={{ fontSize: '10px', color: '#888', marginBottom: '5px' }}>{article.date}</div>
-                      <div style={{ fontSize: '9px', color: '#666', marginBottom: '8px', textTransform: 'uppercase' }}>{article.source}</div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#1a1a1a' }}>{article.headline}</h4>
-                      {(article.img && article.img !== DEFAULT_IMG) && (
-                        <div style={{ marginBottom: '10px' }}>
-                          <img
-                            src={article.img}
-                            alt="Story Visual"
-                            style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '4px' }}
-                          />
+                  {relatedArticles.map((article, index) => {
+                    const timelineContent = showOriginal ? article.content : (article.rephrasedContent || article.content);
+                    const timelineHtml = !showOriginal && article.rephrasedContent 
+                      ? marked.parse(timelineContent, { breaks: true, gfm: true })
+                      : timelineContent;
+                    
+                    return (
+                      <div key={article.id} style={{ marginBottom: '25px', paddingBottom: '20px', borderBottom: '1px solid #e0e0e0' }}>
+                        <div style={{ fontSize: '10px', color: '#888', marginBottom: '5px' }}>{article.date}</div>
+                        <div style={{ fontSize: '9px', color: '#666', marginBottom: '8px', textTransform: 'uppercase' }}>{article.source}</div>
+                        <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#1a1a1a' }}>{article.headline}</h4>
+                        {(article.img && article.img !== DEFAULT_IMG) && (
+                          <div style={{ marginBottom: '10px' }}>
+                            <img
+                              src={article.img}
+                              alt="Story Visual"
+                              style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '4px' }}
+                            />
+                          </div>
+                        )}
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#333' }}>
+                          {!showOriginal && article.rephrasedContent ? (
+                            <div dangerouslySetInnerHTML={{ __html: timelineHtml }} />
+                          ) : (
+                            timelineContent
+                          )}
                         </div>
-                      )}
-                      <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#333' }}>{showOriginal ? article.content : (article.rephrasedContent || article.content)}</div>
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div>
@@ -989,7 +1012,18 @@ function App() {
                       />
                     </div>
                   )}
-                  {showOriginal ? modalArticle.content : (modalArticle.rephrasedContent || modalArticle.content)}
+                  {(() => {
+                    const modalContent = showOriginal ? modalArticle.content : (modalArticle.rephrasedContent || modalArticle.content);
+                    const modalHtml = !showOriginal && modalArticle.rephrasedContent
+                      ? marked.parse(modalContent, { breaks: true, gfm: true })
+                      : modalContent;
+                    
+                    return !showOriginal && modalArticle.rephrasedContent ? (
+                      <div dangerouslySetInnerHTML={{ __html: modalHtml }} />
+                    ) : (
+                      modalContent
+                    );
+                  })()}
                 </div>
               )}
             </div>
