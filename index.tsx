@@ -244,8 +244,24 @@ body {
 }
 
 .description p {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   text-align: justify;
+}
+
+.description h1,
+.description h2,
+.description h3,
+.description h4 {
+  margin-top: 8px;
+  margin-bottom: 6px;
+}
+
+.description strong {
+  font-weight: 700;
+}
+
+.description em {
+  font-style: italic;
 }
 
 .page-number {
@@ -427,8 +443,24 @@ body {
 }
 
 .modal-body p {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   text-align: justify;
+}
+
+.modal-body h1,
+.modal-body h2,
+.modal-body h3,
+.modal-body h4 {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.modal-body strong {
+  font-weight: 700;
+}
+
+.modal-body em {
+  font-style: italic;
 }
 
 .full-coverage-btn {
